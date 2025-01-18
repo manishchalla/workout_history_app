@@ -19,9 +19,12 @@ class WorkoutDetailsPage extends StatelessWidget {
           return ListTile(
             title: Text(result.exercise.name),
             subtitle: Text('Target: ${result.exercise.targetOutput} ${result.exercise.unit}, Actual: ${result.actualOutput}'),
-            trailing: Icon(
-              result.isSuccessful ? Icons.check : Icons.close,
-              color: result.isSuccessful ? Colors.green : Colors.red,
+            trailing: Text(
+              result.isSuccessful ? 'Success' : 'Failed', // Use text instead of icons
+              style: TextStyle(
+                color: result.isSuccessful ? Colors.green : Colors.red, // Change text color based on success
+                fontWeight: FontWeight.bold, // Make the text bold
+              ),
             ),
           );
         },
