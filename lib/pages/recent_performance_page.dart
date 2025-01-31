@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/workout_provider.dart';
 
 class RecentPerformanceWidget extends StatelessWidget {
+  const RecentPerformanceWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     final workoutProvider = Provider.of<WorkoutProvider>(context);

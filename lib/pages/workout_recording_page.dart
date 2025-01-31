@@ -8,7 +8,7 @@ import '../providers/workout_provider.dart';
 class WorkoutRecordingPage extends StatefulWidget {
   final WorkoutPlan workoutPlan;
 
-  WorkoutRecordingPage({required this.workoutPlan});
+  const WorkoutRecordingPage({super.key, required this.workoutPlan});
 
   @override
   _WorkoutRecordingPageState createState() => _WorkoutRecordingPageState();
@@ -71,8 +71,8 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _finishWorkout,
-        child: Icon(Icons.check),
         tooltip: 'Finish Workout',
+        child: Icon(Icons.check),
       ),
     );
   }

@@ -4,7 +4,7 @@ import '../models/workout.dart';
 class WorkoutDetailsPage extends StatelessWidget {
   final Workout workout;
 
-  WorkoutDetailsPage({required this.workout});
+  const WorkoutDetailsPage({super.key, required this.workout});
 
   @override
   Widget build(BuildContext context) {

@@ -7,6 +7,8 @@ import 'workout_recording_page.dart';
 import '../models/workout_plan.dart';
 
 class WorkoutHistoryPage extends StatelessWidget {
+  const WorkoutHistoryPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final workoutProvider = Provider.of<WorkoutProvider>(context);
