@@ -13,49 +13,27 @@ class WorkoutHistoryPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final workoutProvider = Provider.of<WorkoutProvider>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Workout History'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: workoutProvider.workouts.length,
-              itemBuilder: (context, index) {
-                final workout = workoutProvider.workouts[index];
-                final formattedDateTime = DateFormat('MMM/dd/yyyy, h:mm a').format(workout.date);
-                return ListTile(
-                  title: Text('Workout on $formattedDateTime'),
-                  subtitle: Text('${workout.successfulExercises}/${workout.totalExercises} exercises completed'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => WorkoutDetailsPage(workout: workout),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+    return ListView.builder(
+      itemCount: workoutProvider.workouts.length,
+      itemBuilder: (context, index) {
+        final workout = workoutProvider.workouts[index];
+        final formattedDateTime = DateFormat('MMM/dd/yyyy, h:mm a').format(workout.date);
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), // Add margin
+          child: ListTile(
+            title: Text('Workout on $formattedDateTime'),
+            subtitle: Text('${workout.successfulExercises}/${workout.totalExercises} exercises completed'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WorkoutDetailsPage(workout: workout),
+                ),
+              );
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WorkoutRecordingPage(workoutPlan: exampleWorkoutPlan),
-                  ),
-                );
-              },
-              child: Text('Start New Workout'),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

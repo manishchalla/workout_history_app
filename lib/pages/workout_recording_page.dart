@@ -4,6 +4,7 @@ import '../models/exercise_result.dart';
 import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
+import '../widgets/recent_performance_widget.dart'; // Import the widget
 
 class WorkoutRecordingPage extends StatefulWidget {
   final WorkoutPlan workoutPlan;
@@ -47,32 +48,44 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Record Workout'),
+        title: Text('Record Workout'), // Page title
       ),
-      body: ListView.builder(
-        itemCount: widget.workoutPlan.exercises.length,
-        itemBuilder: (context, index) {
-          final exercise = widget.workoutPlan.exercises[index];
-          return ListTile(
-            title: Text(exercise.name),
-            subtitle: Text('Target: ${exercise.targetOutput} ${exercise.unit}'),
-            trailing: SizedBox(
-              width: 100,
-              child: TextField(
-                controller: _controllers[exercise.name],
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: exercise.unit,
-                ),
-              ),
+      body: Column(
+        children: [
+          RecentPerformanceWidget(), // Recent Performance below the page title
+          Expanded(
+            child: ListView.builder(
+              itemCount: widget.workoutPlan.exercises.length,
+              itemBuilder: (context, index) {
+                final exercise = widget.workoutPlan.exercises[index];
+                return Card(
+                  margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), // Add margin
+                  child: ListTile(
+                    title: Text(exercise.name),
+                    subtitle: Text('Target: ${exercise.targetOutput} ${exercise.unit}'),
+                    trailing: SizedBox(
+                      width: 100,
+                      child: TextField(
+                        controller: _controllers[exercise.name],
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: exercise.unit,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _finishWorkout,
-        tooltip: 'Finish Workout',
-        child: Icon(Icons.check),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0), // Add padding
+            child: ElevatedButton(
+              onPressed: _finishWorkout,
+              child: Text('Save Workout'), // Updated button text
+            ),
+          ),
+        ],
       ),
     );
   }

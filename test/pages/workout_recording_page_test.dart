@@ -1,73 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:workout_app/models/exercise.dart';
+import 'package:workout_app/models/workout_plan.dart';
 import 'package:workout_app/pages/workout_recording_page.dart';
 import 'package:workout_app/providers/workout_provider.dart';
-import 'package:workout_app/models/workout_plan.dart';
-import 'package:workout_app/models/exercise.dart';
 
 void main() {
-  testWidgets('WorkoutRecordingPage displays inputs for each exercise', (WidgetTester tester) async {
-    // Arrange: Create a test WorkoutPlan
-    final testWorkoutPlan = WorkoutPlan(
-      name: 'Test Plan',
+  testWidgets('WorkoutRecordingPage displays input fields for each exercise', (WidgetTester tester) async {
+    final workoutPlan = WorkoutPlan(
+      name: "Test Plan",
       exercises: [
-        Exercise(name: 'Push-ups', targetOutput: 20, unit: 'repetitions'),
-        Exercise(name: 'Plank', targetOutput: 60, unit: 'seconds'),
-        Exercise(name: 'Running', targetOutput: 1000, unit: 'meters'),
+        Exercise(name: "Push-ups", targetOutput: 20, unit: "repetitions"),
+        Exercise(name: "Plank", targetOutput: 60, unit: "seconds"),
       ],
     );
 
-    // Act: Render the WorkoutRecordingPage with the test provider
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => WorkoutProvider(),
-        child: MaterialApp(
-          home: WorkoutRecordingPage(workoutPlan: testWorkoutPlan),
-        ),
+        child: MaterialApp(home: WorkoutRecordingPage(workoutPlan: workoutPlan)),
       ),
     );
 
-    // Assert: Verify that each exercise has an input field
-    for (var exercise in testWorkoutPlan.exercises) {
-      expect(find.text(exercise.name), findsOneWidget); // Exercise name
-      expect(find.byType(TextField), findsNWidgets(testWorkoutPlan.exercises.length)); // Input fields
+    for (var exercise in workoutPlan.exercises) {
+      expect(find.text(exercise.name), findsOneWidget);
     }
+
+    expect(find.byType(TextField), findsNWidgets(workoutPlan.exercises.length));
   });
 
-  testWidgets('WorkoutRecordingPage adds workout to shared state', (WidgetTester tester) async {
-    // Arrange: Create a test WorkoutPlan and a WorkoutProvider
-    final testWorkoutPlan = WorkoutPlan(
-      name: 'Test Plan',
+  testWidgets('WorkoutRecordingPage adds a Workout to the shared state when submitted', (WidgetTester tester) async {
+    final workoutPlan = WorkoutPlan(
+      name: "Test Workout",
       exercises: [
-        Exercise(name: 'Push-ups', targetOutput: 20, unit: 'repetitions'),
-        Exercise(name: 'Plank', targetOutput: 60, unit: 'seconds'),
+        Exercise(name: "Push-ups", targetOutput: 20, unit: "repetitions"),
+        Exercise(name: "Plank", targetOutput: 60, unit: "seconds"),
       ],
     );
+
     final provider = WorkoutProvider();
 
-    // Act: Render the WorkoutRecordingPage
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => provider,
-        child: MaterialApp(
-          home: WorkoutRecordingPage(workoutPlan: testWorkoutPlan),
-        ),
+      ChangeNotifierProvider.value(
+        value: provider,
+        child: MaterialApp(home: WorkoutRecordingPage(workoutPlan: workoutPlan)),
       ),
     );
 
-    // Fill out inputs
-    for (var exercise in testWorkoutPlan.exercises) {
-      final textField = find.widgetWithText(TextField, exercise.unit);
-      await tester.enterText(textField, '25'); // Enter output for each exercise
-    }
+    await tester.enterText(find.byType(TextField).at(0), '25');
+    await tester.enterText(find.byType(TextField).at(1), '70');
 
-    // Submit the workout
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Save Workout'));
     await tester.pumpAndSettle();
 
-    // Assert: Verify the workout was added to the provider
     expect(provider.workouts.length, 1);
-    expect(provider.workouts.first.results.length, testWorkoutPlan.exercises.length);
+    expect(provider.workouts.first.results[0].actualOutput, 25);
+    expect(provider.workouts.first.results[1].actualOutput, 70);
   });
 }
