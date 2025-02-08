@@ -4,7 +4,7 @@ import 'providers/workout_provider.dart';
 import 'pages/workout_history_page.dart';
 import 'pages/workout_recording_page.dart';
 import 'widgets/recent_performance_widget.dart';
-import 'models/workout_plan.dart'; // Import for exampleWorkoutPlan
+import 'models/workout_plan.dart';
 
 void main() {
   runApp(

@@ -13,22 +13,22 @@ class WorkoutDetailsPage extends StatelessWidget {
       children: [
         Scaffold(
           appBar: AppBar(
-            title: Text('Workout Details'), // Page title
+            title: Text('Workout Details'),
           ),
           body: ListView.builder(
             itemCount: workout.results.length,
             itemBuilder: (context, index) {
               final result = workout.results[index];
               return Card(
-                margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0), // Add margin
+                margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
                 child: ListTile(
                   title: Text(result.exercise.name),
                   subtitle: Text('Target: ${result.exercise.targetOutput} ${result.exercise.unit}, Actual: ${result.actualOutput}'),
                   trailing: Text(
-                    result.isSuccessful ? 'Success' : 'Failed', // Use text instead of icons
+                    result.isSuccessful ? 'Success' : 'Failed',
                     style: TextStyle(
-                      color: result.isSuccessful ? Colors.green : Colors.red, // Change text color based on success
-                      fontWeight: FontWeight.bold, // Make the text bold
+                      color: result.isSuccessful ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -37,10 +37,10 @@ class WorkoutDetailsPage extends StatelessWidget {
           ),
         ),
         Positioned(
-          bottom: 0, // Place at the bottom of the screen
+          bottom: 0,
           left: 0,
           right: 0,
-          child: RecentPerformanceWidget(), // Add the widget here
+          child: RecentPerformanceWidget(),
         ),
       ],
     );
