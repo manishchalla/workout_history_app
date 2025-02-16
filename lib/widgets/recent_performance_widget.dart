@@ -38,7 +38,6 @@ class RecentPerformanceWidget extends StatelessWidget {
     // Calculate total exercises and successful exercises
     int totalExercises = 0;
     int successfulExercises = 0;
-
     for (var workout in recentWorkouts) {
       totalExercises += workout.results.length;
       successfulExercises += workout.results.where((result) => result.isSuccessful).length;

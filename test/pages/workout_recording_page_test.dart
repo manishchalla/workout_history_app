@@ -1,61 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_app/models/exercise.dart';
 import 'package:workout_app/models/workout_plan.dart';
+import 'package:workout_app/pages/workout_details_page.dart';
 import 'package:workout_app/pages/workout_recording_page.dart';
 import 'package:workout_app/providers/workout_provider.dart';
+import '../mocks.mocks.dart'; // Import the generated mock classes
 
 void main() {
-  testWidgets('WorkoutRecordingPage displays input fields for each exercise', (WidgetTester tester) async {
-    final workoutPlan = WorkoutPlan(
-      name: "Test Plan",
-      exercises: [
-        Exercise(name: "Push-ups", targetOutput: 20, unit: "repetitions"),
-        Exercise(name: "Plank", targetOutput: 60, unit: "seconds"),
-      ],
-    );
+  late MockWorkoutProvider mockWorkoutProvider;
 
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => WorkoutProvider(),
-        child: MaterialApp(home: WorkoutRecordingPage(workoutPlan: workoutPlan)),
-      ),
-    );
-
-    for (var exercise in workoutPlan.exercises) {
-      expect(find.text(exercise.name), findsOneWidget);
-    }
-
-    expect(find.byType(TextField), findsNWidgets(workoutPlan.exercises.length));
+  setUp(() {
+    mockWorkoutProvider = MockWorkoutProvider();
   });
 
-  testWidgets('WorkoutRecordingPage adds a Workout to the shared state when submitted', (WidgetTester tester) async {
-    final workoutPlan = WorkoutPlan(
-      name: "Test Workout",
-      exercises: [
-        Exercise(name: "Push-ups", targetOutput: 20, unit: "repetitions"),
-        Exercise(name: "Plank", targetOutput: 60, unit: "seconds"),
-      ],
-    );
-
-    final provider = WorkoutProvider();
-
-    await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: provider,
-        child: MaterialApp(home: WorkoutRecordingPage(workoutPlan: workoutPlan)),
+  Widget _buildTestableWidget(Widget child) {
+    return ChangeNotifierProvider<WorkoutProvider>.value(
+      value: mockWorkoutProvider,
+      child: MaterialApp(
+        home: child,
       ),
     );
+  }
 
-    await tester.enterText(find.byType(TextField).at(0), '25');
-    await tester.enterText(find.byType(TextField).at(1), '70');
+  group('WorkoutRecordingPage Tests', () {
+    testWidgets('Displays saved workout plans', (WidgetTester tester) async {
+      // Arrange
+      final savedPlans = [
+        WorkoutPlan(name: 'Plan 1', exercises: []),
+        WorkoutPlan(name: 'Plan 2', exercises: []),
+      ];
+      when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Save Workout'));
-    await tester.pumpAndSettle();
+      // Act
+      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
 
-    expect(provider.workouts.length, 1);
-    expect(provider.workouts.first.results[0].actualOutput, 25);
-    expect(provider.workouts.first.results[1].actualOutput, 70);
+      // Assert
+      expect(find.text('Plan 1'), findsOneWidget);
+      expect(find.text('Plan 2'), findsOneWidget);
+    });
+
+    testWidgets('Navigates to WorkoutDetailsPage when a plan is selected', (WidgetTester tester) async {
+      // Arrange
+      final savedPlans = [
+        WorkoutPlan(
+          name: 'Plan 1',
+          exercises: [
+            Exercise(name: 'Push-ups', targetOutput: 20, unit: 'repetitions'),
+            Exercise(name: 'Squats', targetOutput: 30, unit: 'repetitions'),
+          ],
+        ),
+      ];
+      when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
+
+      // Act
+      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
+      await tester.tap(find.text('Start Workout')); // Tap the "Start Workout" button
+      await tester.pumpAndSettle(); // Wait for navigation to complete
+
+      // Assert
+      expect(find.byType(WorkoutDetailsPage), findsOneWidget); // Verify navigation
+    });
+
+    testWidgets('Deletes a workout plan when the delete icon is pressed', (WidgetTester tester) async {
+      // Arrange
+      final savedPlans = [
+        WorkoutPlan(
+          id: 1,
+          name: 'Plan 1',
+          exercises: [],
+        ),
+      ];
+      when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
+
+      // Act
+      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
+      await tester.tap(find.byIcon(Icons.delete)); // Tap the delete icon
+      await tester.pumpAndSettle(); // Wait for the delete operation to complete
+
+      // Assert
+      verify(mockWorkoutProvider.deleteWorkoutPlan(1)).called(1); // Verify that deleteWorkoutPlan was called
+    });
   });
 }

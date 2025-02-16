@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // For Timer functionality
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout.dart';
@@ -18,46 +17,70 @@ class WorkoutDetailsPage extends StatefulWidget {
 
 class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   late Map<String, int> _actualOutputs;
-  late Map<String, Stopwatch> _stopwatches; // Track stopwatches for each exercise
-  late Map<String, Timer> _timers; // Track timers for updating the UI
+  bool _isSaving = false; // For loading indicator during save
 
   @override
   void initState() {
     super.initState();
     _actualOutputs = {for (var exercise in widget.workoutPlan.exercises) exercise.name: 0};
-    _stopwatches = {for (var exercise in widget.workoutPlan.exercises) exercise.name: Stopwatch()};
-    _timers = {};
   }
 
-  @override
-  void dispose() {
-    for (var timer in _timers.values) {
-      timer.cancel();
-    }
-    super.dispose();
+  String? _validateInput(String? value, int max) {
+    if (value == null || value.isEmpty) return 'Value is required';
+    final intValue = int.tryParse(value);
+    if (intValue == null) return 'Enter a valid number';
+    if (intValue < 0 || intValue > max) return 'Value must be between 0 and $max';
+    return null;
   }
 
-  void _saveWorkout(BuildContext context) {
-    List<ExerciseResult> results = widget.workoutPlan.exercises.map((exercise) {
-      return ExerciseResult(
-        exercise: exercise,
-        actualOutput: _actualOutputs[exercise.name]!,
+  void _saveWorkout(BuildContext context) async {
+    setState(() => _isSaving = true); // Show loading indicator
+    try {
+      print('Starting save operation...');
+
+      // Simulate async operation (e.g., saving to a database)
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Validate all inputs before saving
+      for (var exercise in widget.workoutPlan.exercises) {
+        final error = _validateInput(_actualOutputs[exercise.name]?.toString(), exercise.targetOutput);
+        if (error != null) {
+          print('Validation failed for ${exercise.name}: $error');
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error in ${exercise.name}: $error')));
+          return;
+        }
+      }
+
+      print('All inputs are valid. Creating workout object...');
+
+      // Create workout object
+      List<ExerciseResult> results = widget.workoutPlan.exercises.map((exercise) {
+        return ExerciseResult(
+          exercise: exercise,
+          actualOutput: _actualOutputs[exercise.name]!,
+        );
+      }).toList();
+
+      Workout workout = Workout(
+        id: null,
+        date: DateTime.now(),
+        results: results,
       );
-    }).toList();
 
-    Workout workout = Workout(
-      id: null,
-      date: DateTime.now(),
-      results: results,
-    );
+      print('Adding workout to provider...');
+      // Add workout to provider
+      final workoutProvider = Provider.of<WorkoutProvider>(context, listen: false);
+      workoutProvider.addWorkout(workout);
 
-    final workoutProvider = Provider.of<WorkoutProvider>(context, listen: false);
-    workoutProvider.addWorkout(workout);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Workout saved successfully!')),
-    );
-    Navigator.pop(context);
+      print('Workout saved successfully!');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Workout saved successfully!')));
+      Navigator.pop(context);
+    } catch (e) {
+      print('Error during save: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save workout: $e')));
+    } finally {
+      setState(() => _isSaving = false); // Hide loading indicator
+    }
   }
 
   @override
@@ -67,7 +90,9 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         title: Text(widget.workoutPlan.name),
         backgroundColor: Colors.teal,
       ),
-      body: Column(
+      body: widget.workoutPlan.exercises.isEmpty
+          ? Center(child: Text('No exercises available.', style: TextStyle(fontSize: 18, color: Colors.grey)))
+          : Column(
         children: [
           Expanded(
             child: ListView.builder(
@@ -81,12 +106,14 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
-              onPressed: () => _saveWorkout(context),
+              onPressed: _isSaving ? null : () => _saveWorkout(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.lightBlueAccent[600],
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
-              child: Text('Save Workout', style: TextStyle(color: Colors.blueAccent[600])),
+              child: _isSaving
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Save Workout', style: TextStyle(color: Colors.blueAccent)),
             ),
           ),
         ],
@@ -97,225 +124,95 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   Widget _buildExerciseInput(BuildContext context, Exercise exercise) {
     return Card(
       elevation: 4,
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Padding(
-        padding: const EdgeInsets.all(12.0), // Reduced padding for compactness
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               exercise.name,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
-            SizedBox(height: 8),
-            if (exercise.unit == 'seconds')
-              _buildSecondsInput(exercise),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_actualOutputs[exercise.name]} / ${exercise.targetOutput} ${exercise.unit}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                if (exercise.unit == 'seconds')
+                  SizedBox(
+                    width: 80,
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        border: const OutlineInputBorder(),
+                        suffixText: '/${exercise.targetOutput}',
+                        errorText: _validateInput(_actualOutputs[exercise.name]?.toString(), exercise.targetOutput),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _actualOutputs[exercise.name] = int.tryParse(value) ?? 0;
+                        });
+                      },
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
             if (exercise.unit == 'meters')
-              _buildMetersInput(exercise),
+              Slider(
+                value: _actualOutputs[exercise.name]?.toDouble() ?? 0,
+                min: 0,
+                max: exercise.targetOutput.toDouble(),
+                divisions: exercise.targetOutput,
+                label: '${_actualOutputs[exercise.name]} / ${exercise.targetOutput} meters',
+                onChanged: (value) {
+                  setState(() {
+                    _actualOutputs[exercise.name] = value.toInt();
+                  });
+                },
+              ),
             if (exercise.unit == 'repetitions')
-              _buildRepetitionsInput(exercise),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.remove_circle_outline, color: Colors.red[400], size: 28),
+                    onPressed: () {
+                      setState(() {
+                        if (_actualOutputs[exercise.name]! > 0) {
+                          _actualOutputs[exercise.name] = _actualOutputs[exercise.name]! - 1;
+                        }
+                      });
+                    },
+                    tooltip: 'Decrease repetitions',
+                  ),
+                  const SizedBox(width: 20),
+                  Text(
+                    '${_actualOutputs[exercise.name]}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 20),
+                  IconButton(
+                    icon: Icon(Icons.add_circle_outline, color: Colors.green[400], size: 28),
+                    onPressed: () {
+                      setState(() {
+                        if (_actualOutputs[exercise.name]! < exercise.targetOutput) {
+                          _actualOutputs[exercise.name] = _actualOutputs[exercise.name]! + 1;
+                        }
+                      });
+                    },
+                    tooltip: 'Increase repetitions',
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildSecondsInput(Exercise exercise) {
-    final stopwatch = _stopwatches[exercise.name]!;
-    final isRunning = stopwatch.isRunning;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '${_formatTime(stopwatch.elapsedMilliseconds)} / ${exercise.targetOutput} seconds',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-            ),
-            SizedBox(
-              width: 80,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  border: OutlineInputBorder(),
-                  suffixText: '/${exercise.targetOutput}',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _actualOutputs[exercise.name] = int.tryParse(value) ?? 0;
-                    if (_actualOutputs[exercise.name]! > exercise.targetOutput) {
-                      _actualOutputs[exercise.name] = exercise.targetOutput;
-                    }
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  if (isRunning) {
-                    stopwatch.stop();
-                    _timers[exercise.name]?.cancel();
-                  } else {
-                    stopwatch.start();
-                    _timers[exercise.name] = Timer.periodic(Duration(milliseconds: 10), (_) {
-                      setState(() {});
-                    });
-                  }
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isRunning ? Colors.red[400] : Colors.green[400],
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              ),
-              child: Text(isRunning ? 'Stop' : 'Start', style: TextStyle(fontSize: 12, color: Colors.white70)),
-            ),
-            SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  stopwatch.reset();
-                  _actualOutputs[exercise.name] = 0;
-                  _timers[exercise.name]?.cancel();
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[500],
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              ),
-              child: Text('Reset', style: TextStyle(fontSize: 12, color: Colors.white70)),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetersInput(Exercise exercise) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '${_actualOutputs[exercise.name]} / ${exercise.targetOutput} meters',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-            ),
-            SizedBox(
-              width: 80,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  border: OutlineInputBorder(),
-                  suffixText: '/${exercise.targetOutput}',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _actualOutputs[exercise.name] = int.tryParse(value) ?? 0;
-                    if (_actualOutputs[exercise.name]! > exercise.targetOutput) {
-                      _actualOutputs[exercise.name] = exercise.targetOutput;
-                    }
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        Slider(
-          value: _actualOutputs[exercise.name]?.toDouble() ?? 0,
-          min: 0,
-          max: exercise.targetOutput.toDouble(),
-          divisions: exercise.targetOutput,
-          onChanged: (value) {
-            setState(() {
-              _actualOutputs[exercise.name] = value.toInt();
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRepetitionsInput(Exercise exercise) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '${_actualOutputs[exercise.name]} / ${exercise.targetOutput} repetitions',
-              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-            ),
-            SizedBox(
-              width: 80,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  border: OutlineInputBorder(),
-                  suffixText: '/${exercise.targetOutput}',
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _actualOutputs[exercise.name] = int.tryParse(value) ?? 0;
-                    if (_actualOutputs[exercise.name]! > exercise.targetOutput) {
-                      _actualOutputs[exercise.name] = exercise.targetOutput;
-                    }
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: Icon(Icons.remove_circle_outline, color: Colors.red[400], size: 18),
-              onPressed: () {
-                setState(() {
-                  if (_actualOutputs[exercise.name]! > 0) {
-                    _actualOutputs[exercise.name] = _actualOutputs[exercise.name]! - 1;
-                  }
-                });
-              },
-            ),
-            Text(
-              '${_actualOutputs[exercise.name]}',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: Icon(Icons.add_circle_outline, color: Colors.green[400], size: 18),
-              onPressed: () {
-                setState(() {
-                  if (_actualOutputs[exercise.name]! < exercise.targetOutput) {
-                    _actualOutputs[exercise.name] = _actualOutputs[exercise.name]! + 1;
-                  }
-                });
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  String _formatTime(int milliseconds) {
-    final seconds = (milliseconds / 1000).floor();
-    return '$seconds';
   }
 }

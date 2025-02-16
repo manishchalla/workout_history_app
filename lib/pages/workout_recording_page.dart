@@ -20,7 +20,7 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Select Workout Plan'),
-        backgroundColor: Colors.lightBlueAccent[00],
+        backgroundColor: Colors.teal,
       ),
       body: savedPlans.isEmpty
           ? Center(

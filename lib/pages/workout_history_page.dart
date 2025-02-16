@@ -23,7 +23,7 @@ class WorkoutHistoryPage extends StatelessWidget {
           final workout = workouts[index];
 
           String formattedDate = '${workout.date.day}/${workout.date.month}/${workout.date.year}';
-          String formattedTime = '${workout.date.hour}:${workout.date.minute} ${workout.date.hour >= 12 ? 'PM' : 'AM'}';
+          String formattedTime = '${workout.date.hour}:${workout.date.minute.toString().padLeft(2, '0')} ${workout.date.hour >= 12 ? 'PM' : 'AM'}';
 
           int totalExercises = workout.results.length;
           int successfulExercises = workout.results.where((result) => result.actualOutput >= result.exercise.targetOutput).length;
