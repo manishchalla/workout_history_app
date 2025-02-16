@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/workout_provider.dart';
-import 'pages/workout_history_page.dart';
-import 'pages/workout_recording_page.dart';
-import 'widgets/recent_performance_widget.dart';
-import 'models/workout_plan.dart';
+import 'pages/home_layout.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize the WorkoutProvider and load data
+  final workoutProvider = WorkoutProvider();
+  await workoutProvider.loadWorkouts(); // Load saved workouts
+  await workoutProvider.loadSavedWorkoutPlans(); // Load saved workout plans
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => WorkoutProvider(),
+    ChangeNotifierProvider.value(
+      value: workoutProvider,
       child: MyApp(),
     ),
   );
@@ -23,42 +27,25 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Workout App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.teal, // Primary color for the app
+        scaffoldBackgroundColor: Colors.grey[100], // Light background for pages
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.teal, // AppBar color
+          foregroundColor: Colors.white, // Text color on AppBar
+        ),
+        textTheme: TextTheme(
+          headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal),
+          bodyMedium: TextStyle(fontSize: 16, color: Colors.black87),
+        ),
+        cardTheme: CardTheme(
+          color: Colors.white, // Card background color
+          elevation: 4, // Add shadow for depth
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: Colors.teal, // Color for LinearProgressIndicator
+        ),
       ),
-      home: HomeLayout(), // Use the existing layout
-    );
-  }
-}
-
-class HomeLayout extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Workout App'), // App title
-      ),
-      body: Column(
-        children: [
-          RecentPerformanceWidget(), // Recent Performance below the app title
-          Expanded(
-            child: WorkoutHistoryPage(), // Page content
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0), // Add padding
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => WorkoutRecordingPage(workoutPlan: exampleWorkoutPlan),
-                  ),
-                );
-              },
-              child: Text('Add a Workout'), // Updated button text
-            ),
-          ),
-        ],
-      ),
+      home: HomeLayout(), // Set the HomeLayout as the main screen
     );
   }
 }
