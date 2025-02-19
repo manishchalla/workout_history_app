@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
-import 'package:workout_app/models/exercise.dart';
-import 'package:workout_app/models/exercise_result.dart';
-import 'package:workout_app/models/workout.dart';
 import 'package:workout_app/pages/workout_history_page.dart';
 import 'package:workout_app/providers/workout_provider.dart';
 import '../mocks.mocks.dart'; // Import the generated mock classes
@@ -16,7 +13,7 @@ void main() {
     mockWorkoutProvider = MockWorkoutProvider();
   });
 
-  Widget _buildTestableWidget(Widget child) {
+  Widget buildTestableWidget(Widget child) {
     return ChangeNotifierProvider<WorkoutProvider>.value(
       value: mockWorkoutProvider,
       child: MaterialApp(
@@ -33,7 +30,7 @@ void main() {
           when(mockWorkoutProvider.workouts).thenReturn([]);
 
           // Act
-          await tester.pumpWidget(_buildTestableWidget(const WorkoutHistoryPage()));
+          await tester.pumpWidget(buildTestableWidget(const WorkoutHistoryPage()));
 
           // Assert
           expect(find.text('No workouts recorded yet.'), findsOneWidget);

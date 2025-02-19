@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/workout.dart';
 import '../providers/workout_provider.dart';
 import 'package:provider/provider.dart';
 

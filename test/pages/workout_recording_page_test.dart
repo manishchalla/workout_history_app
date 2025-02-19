@@ -16,7 +16,7 @@ void main() {
     mockWorkoutProvider = MockWorkoutProvider();
   });
 
-  Widget _buildTestableWidget(Widget child) {
+  Widget buildTestableWidget(Widget child) {
     return ChangeNotifierProvider<WorkoutProvider>.value(
       value: mockWorkoutProvider,
       child: MaterialApp(
@@ -35,7 +35,7 @@ void main() {
       when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
+      await tester.pumpWidget(buildTestableWidget(WorkoutRecordingPage()));
 
       // Assert
       expect(find.text('Plan 1'), findsOneWidget);
@@ -56,7 +56,7 @@ void main() {
       when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
+      await tester.pumpWidget(buildTestableWidget(WorkoutRecordingPage()));
       await tester.tap(find.text('Start Workout')); // Tap the "Start Workout" button
       await tester.pumpAndSettle(); // Wait for navigation to complete
 
@@ -76,7 +76,7 @@ void main() {
       when(mockWorkoutProvider.savedWorkoutPlans).thenReturn(savedPlans);
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(WorkoutRecordingPage()));
+      await tester.pumpWidget(buildTestableWidget(WorkoutRecordingPage()));
       await tester.tap(find.byIcon(Icons.delete)); // Tap the delete icon
       await tester.pumpAndSettle(); // Wait for the delete operation to complete
 

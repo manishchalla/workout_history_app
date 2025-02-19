@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:workout_app/models/exercise.dart';
-import 'package:workout_app/models/workout.dart';
 import 'package:workout_app/models/workout_plan.dart';
 import 'package:workout_app/pages/workout_details_page.dart';
 import 'package:workout_app/providers/workout_provider.dart';
@@ -16,7 +14,7 @@ void main() {
     mockWorkoutProvider = MockWorkoutProvider();
   });
 
-  Widget _buildTestableWidget(Widget child) {
+  Widget buildTestableWidget(Widget child) {
     return ChangeNotifierProvider<WorkoutProvider>.value(
       value: mockWorkoutProvider,
       child: MaterialApp(
@@ -38,7 +36,7 @@ void main() {
       );
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(WorkoutDetailsPage(workoutPlan: workoutPlan)));
+      await tester.pumpWidget(buildTestableWidget(WorkoutDetailsPage(workoutPlan: workoutPlan)));
 
       // Assert
       expect(find.byType(TextField), findsNWidgets(1)); // Only Squats has a TextField
@@ -57,7 +55,7 @@ void main() {
       );
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(WorkoutDetailsPage(workoutPlan: workoutPlan)));
+      await tester.pumpWidget(buildTestableWidget(WorkoutDetailsPage(workoutPlan: workoutPlan)));
 
       // Enter invalid input for Squats
       await tester.enterText(find.byType(TextField), '-5'); // Invalid value

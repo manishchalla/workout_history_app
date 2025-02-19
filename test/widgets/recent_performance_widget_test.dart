@@ -16,7 +16,7 @@ void main() {
     mockWorkoutProvider = MockWorkoutProvider();
   });
 
-  Widget _buildTestableWidget(Widget child) {
+  Widget buildTestableWidget(Widget child) {
     return ChangeNotifierProvider<WorkoutProvider>.value(
       value: mockWorkoutProvider,
       child: MaterialApp(
@@ -47,7 +47,7 @@ void main() {
       when(mockWorkoutProvider.recentWorkouts).thenReturn(workouts);
 
       // Act
-      await tester.pumpWidget(_buildTestableWidget(const RecentPerformanceWidget()));
+      await tester.pumpWidget(buildTestableWidget(const RecentPerformanceWidget()));
 
       // Assert
       expect(find.text('Last 7 Days Performance'), findsOneWidget);
