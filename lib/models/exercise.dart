@@ -11,10 +11,14 @@ class Exercise {
 
   // Factory method to create an Exercise from JSON
   factory Exercise.fromJson(Map<String, dynamic> json) {
+    if (!json.containsKey('name') || !json.containsKey('target') || !json.containsKey('unit')) {
+      print("⚠️ Warning: Malformed Exercise JSON -> $json");
+    }
+
     return Exercise(
-      name: json['name'],
-      targetOutput: json['target'] ?? 0, // Use 'target' from JSON, default to 0 if null
-      unit: json['unit'] ?? 'repetitions', // Default to 'repetitions' if unit is null
+      name: json['name'] as String? ?? 'Unknown Exercise',
+      targetOutput: json['target'] as int? ?? 0, // Use 'target' from JSON
+      unit: json['unit'] as String? ?? 'repetitions', // Default to 'repetitions' if null
     );
   }
 
@@ -22,7 +26,7 @@ class Exercise {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'targetOutput': targetOutput,
+      'target': targetOutput, // Ensure key consistency
       'unit': unit,
     };
   }

@@ -14,21 +14,15 @@ class ExerciseResult {
   // Factory method to create an ExerciseResult from JSON
   factory ExerciseResult.fromJson(Map<String, dynamic> json) {
     return ExerciseResult(
-      exercise: Exercise(
-        name: json['name'],
-        targetOutput: json['target_output'] ?? 0, // Default to 0 if null
-        unit: json['unit'] ?? 'repetitions', // Default to 'repetitions' if null
-      ),
-      actualOutput: json['actual_output'] ?? 0, // Default to 0 if null
+      exercise: Exercise.fromJson(json), // Use Exercise.fromJson to avoid mismatches
+      actualOutput: json['actual_output'] as int? ?? 0, // Ensure proper casting
     );
   }
 
   // Convert ExerciseResult to JSON
   Map<String, dynamic> toJson() {
     return {
-      'name': exercise.name,
-      'target_output': exercise.targetOutput,
-      'unit': exercise.unit,
+      ...exercise.toJson(), // Merge exercise JSON
       'actual_output': actualOutput,
     };
   }

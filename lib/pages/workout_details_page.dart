@@ -150,7 +150,6 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
                       decoration: InputDecoration(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         border: const OutlineInputBorder(),
-                        suffixText: '/${exercise.targetOutput}',
                         errorText: _validateInput(_actualOutputs[exercise.name]?.toString(), exercise.targetOutput),
                       ),
                       onChanged: (value) {

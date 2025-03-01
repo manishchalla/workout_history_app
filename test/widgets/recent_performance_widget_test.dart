@@ -35,11 +35,11 @@ void main() {
           results: [
             ExerciseResult(
               exercise: Exercise(name: 'Push-ups', targetOutput: 20, unit: 'repetitions'),
-              actualOutput: 20, // Successful: actualOutput == targetOutput
+              actualOutput: 20, // Successful
             ),
             ExerciseResult(
               exercise: Exercise(name: 'Squats', targetOutput: 30, unit: 'seconds'),
-              actualOutput: 30, // Successful: actualOutput == targetOutput
+              actualOutput: 30, // Successful
             ),
           ],
         ),
@@ -53,6 +53,19 @@ void main() {
       expect(find.text('Last 7 Days Performance'), findsOneWidget);
       expect(find.text('Successful Exercises: 2 / 2'), findsOneWidget);
       expect(find.text('100.0% Success'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget); // Ensure progress bar exists
+    });
+
+    testWidgets('Displays default message when no workouts exist', (WidgetTester tester) async {
+      // Arrange
+      when(mockWorkoutProvider.recentWorkouts).thenReturn([]); // No workouts
+
+      // Act
+      await tester.pumpWidget(buildTestableWidget(const RecentPerformanceWidget()));
+
+      // Assert
+      expect(find.text('No Recent Performance.'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsNothing); // No progress bar should be shown
     });
   });
 }
