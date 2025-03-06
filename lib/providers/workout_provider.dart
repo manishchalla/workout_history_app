@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/exercise_result.dart';
 import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../database/database_helper.dart';
@@ -18,13 +19,13 @@ class WorkoutProvider with ChangeNotifier {
     return _workouts.where((workout) => workout.date.isAfter(sevenDaysAgo)).toList();
   }
 
-  // Load all saved workouts from the database
+  // Load all saved workouts from the database (Solo Workouts)
   Future<void> loadWorkouts() async {
     _workouts = await _dbHelper.getWorkouts();
     notifyListeners();
   }
 
-  // Add a new workout to the database
+  // Add a new workout to the database (Solo Workouts)
   Future<void> addWorkout(Workout workout) async {
     try {
       await _dbHelper.insertWorkout(workout);
@@ -36,7 +37,7 @@ class WorkoutProvider with ChangeNotifier {
     }
   }
 
-  // Delete a workout by ID
+  // Delete a workout by ID (Solo Workouts)
   Future<void> deleteWorkout(int workoutId) async {
     await _dbHelper.deleteWorkout(workoutId);
     _workouts.removeWhere((workout) => workout.id == workoutId);
@@ -78,5 +79,40 @@ class WorkoutProvider with ChangeNotifier {
   Future<bool> isDuplicatePlan(String name) async {
     final savedPlans = await _dbHelper.getSavedWorkoutPlans();
     return savedPlans.any((plan) => plan.name.toLowerCase() == name.toLowerCase());
+  }
+
+  // Create a new group workout in Firestore
+  Future<String> createGroupWorkout(String type, String sharedKey, List<ExerciseResult> results) async {
+    try {
+      final workoutId = await _dbHelper.createGroupWorkout(type, sharedKey, results);
+      print('Group workout created successfully with ID: $workoutId');
+      return workoutId;
+    } catch (e) {
+      print('Error creating group workout: $e');
+      rethrow;
+    }
+  }
+
+  // Join a group workout using the shared key
+  Future<void> joinGroupWorkout(String sharedKey, List<ExerciseResult> results) async {
+    try {
+      await _dbHelper.joinGroupWorkout(sharedKey, results);
+      print('Successfully joined group workout with shared key: $sharedKey');
+    } catch (e) {
+      print('Error joining group workout: $e');
+      rethrow;
+    }
+  }
+
+  // Fetch group workout details by shared key
+  Future<Map<String, dynamic>> getGroupWorkout(String sharedKey) async {
+    try {
+      final workoutData = await _dbHelper.getGroupWorkout(sharedKey);
+      print('Fetched group workout data: $workoutData');
+      return workoutData;
+    } catch (e) {
+      print('Error fetching group workout: $e');
+      rethrow;
+    }
   }
 }

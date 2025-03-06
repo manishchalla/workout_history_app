@@ -1,6 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout.dart';
@@ -24,7 +26,7 @@ class DatabaseHelper {
     return _database!;
   }
 
-  // Initialize the database
+  // Initialize the SQLite database
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'workout_app.db');
     return await openDatabase(
@@ -78,7 +80,7 @@ class DatabaseHelper {
     }
   }
 
-  // Insert a new workout into the database
+  // Insert a new workout into the SQLite database (Solo Workouts)
   Future<int> insertWorkout(Workout workout) async {
     final db = await database;
     int workoutId = await db.insert('workouts', {'date': workout.date.toIso8601String()});
@@ -94,7 +96,7 @@ class DatabaseHelper {
     return workoutId;
   }
 
-  // Fetch all workouts from the database
+  // Fetch all workouts from the SQLite database (Solo Workouts)
   Future<List<Workout>> getWorkouts() async {
     final db = await database;
     List<Map<String, dynamic>> workoutMaps = await db.query('workouts', orderBy: 'date DESC');
@@ -124,15 +126,14 @@ class DatabaseHelper {
     return workouts;
   }
 
-  // Delete a workout by ID
+  // Delete a workout by ID (Solo Workouts)
   Future<void> deleteWorkout(int workoutId) async {
     final db = await database;
     await db.delete('exercise_results', where: 'workout_id = ?', whereArgs: [workoutId]);
     await db.delete('workouts', where: 'id = ?', whereArgs: [workoutId]);
   }
 
-
-  // Insert or replace a workout plan into the database
+  // Insert or replace a workout plan into the SQLite database
   Future<int> insertWorkoutPlan(WorkoutPlan workoutPlan) async {
     final db = await database;
     int id = await db.insert(
@@ -150,7 +151,7 @@ class DatabaseHelper {
     return id; // Return the ID of the inserted workout plan
   }
 
-  // Fetch all saved workout plans from the database
+  // Fetch all saved workout plans from the SQLite database
   Future<List<WorkoutPlan>> getSavedWorkoutPlans() async {
     final db = await database;
     try {
@@ -176,9 +177,72 @@ class DatabaseHelper {
     }
   }
 
-  // Delete a workout plan by ID
+  // Delete a workout plan by ID (SQLite)
   Future<void> deleteWorkoutPlan(int planId) async {
     final db = await database;
     await db.delete('workout_plans', where: 'id = ?', whereArgs: [planId]);
+  }
+
+  // Firestore Methods for Group Workouts
+
+  // Create a new group workout in Firestore
+  Future<String> createGroupWorkout(String type, String sharedKey, List<ExerciseResult> results) async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Store workout data in Firestore
+    final workoutRef = await firestore.collection('workouts').add({
+      'type': type,
+      'creatorId': userId,
+      'date': DateTime.now(),
+      'sharedKey': sharedKey,
+      'results': {userId: results.map((result) => result.toJson()).toList()},
+    });
+
+    return workoutRef.id; // Return the Firestore document ID
+  }
+
+  // Join a group workout using the shared key
+  Future<void> joinGroupWorkout(String sharedKey, List<ExerciseResult> results) async {
+    final firestore = FirebaseFirestore.instance;
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Find the workout by shared key
+    final querySnapshot = await firestore
+        .collection('workouts')
+        .where('sharedKey', isEqualTo: sharedKey)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      throw Exception('Workout not found');
+    }
+
+    final workoutDoc = querySnapshot.docs.first;
+    final workoutData = workoutDoc.data();
+
+    // Update the results map with the current user's results
+    final updatedResults = Map<String, dynamic>.from(workoutData['results']);
+    updatedResults[userId] = results.map((result) => result.toJson()).toList();
+
+    // Update the workout document in Firestore
+    await workoutDoc.reference.update({'results': updatedResults});
+  }
+
+  // Fetch group workout details by shared key
+  Future<Map<String, dynamic>> getGroupWorkout(String sharedKey) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Find the workout by shared key
+    final querySnapshot = await firestore
+        .collection('workouts')
+        .where('sharedKey', isEqualTo: sharedKey)
+        .get();
+
+    if (querySnapshot.docs.isEmpty) {
+      throw Exception('Workout not found');
+    }
+
+    final workoutDoc = querySnapshot.docs.first;
+    return workoutDoc.data();
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workout_app/pages/workouts/workout_result_page.dart';
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout.dart';
@@ -6,10 +7,18 @@ import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
 import 'package:provider/provider.dart';
 
+
 class WorkoutDetailsPage extends StatefulWidget {
   final WorkoutPlan workoutPlan;
+  final String workoutType; // "Solo", "Collaborative", or "Competitive"
+  final String sharedKey; // Shared key for group workouts
 
-  const WorkoutDetailsPage({super.key, required this.workoutPlan});
+  const WorkoutDetailsPage({
+    super.key,
+    required this.workoutPlan,
+    required this.workoutType,
+    required this.sharedKey,
+  });
 
   @override
   _WorkoutDetailsPageState createState() => _WorkoutDetailsPageState();
@@ -36,11 +45,6 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   void _saveWorkout(BuildContext context) async {
     setState(() => _isSaving = true); // Show loading indicator
     try {
-      print('Starting save operation...');
-
-      // Simulate async operation (e.g., saving to a database)
-      await Future.delayed(const Duration(seconds: 2));
-
       // Validate all inputs before saving
       for (var exercise in widget.workoutPlan.exercises) {
         final error = _validateInput(_actualOutputs[exercise.name]?.toString(), exercise.targetOutput);
@@ -68,13 +72,37 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
       );
 
       print('Adding workout to provider...');
-      // Add workout to provider
       final workoutProvider = Provider.of<WorkoutProvider>(context, listen: false);
-      workoutProvider.addWorkout(workout);
 
-      print('Workout saved successfully!');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Workout saved successfully!')));
-      Navigator.pop(context);
+      if (widget.workoutType == 'Solo') {
+        // Save solo workout to SQLite
+        await workoutProvider.addWorkout(workout);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Solo workout saved successfully!')));
+      } else {
+        // Handle group workouts (collaborative or competitive)
+        if (widget.sharedKey.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Shared key is required for group workouts.')));
+          return;
+        }
+
+        if (widget.workoutType == 'Collaborative') {
+          // Create or join a collaborative workout
+          await workoutProvider.createGroupWorkout(widget.workoutType, widget.sharedKey, results);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Collaborative workout created/joined successfully!')));
+        } else if (widget.workoutType == 'Competitive') {
+          // Create or join a competitive workout
+          await workoutProvider.joinGroupWorkout(widget.sharedKey, results);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Competitive workout joined successfully!')));
+        }
+      }
+
+      // Navigate to the Results Page after saving
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => WorkoutResultsPage(sharedKey: widget.sharedKey),
+        ),
+      );
     } catch (e) {
       print('Error during save: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save workout: $e')));
@@ -87,7 +115,7 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.workoutPlan.name),
+        title: Text('${widget.workoutType} Workout: ${widget.workoutPlan.name}'),
         backgroundColor: Colors.teal,
       ),
       body: widget.workoutPlan.exercises.isEmpty

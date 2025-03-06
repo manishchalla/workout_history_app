@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workout_app/pages/workouts/competitive_workout_screen.dart';
 import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +13,9 @@ class WorkoutRecordingPage extends StatefulWidget {
 }
 
 class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
+  String? _selectedWorkoutType; // Tracks the selected workout type
+  final TextEditingController _sharedKeyController = TextEditingController(); // For shared key input
+
   @override
   Widget build(BuildContext context) {
     final workoutProvider = Provider.of<WorkoutProvider>(context);
@@ -91,24 +95,63 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
             ),
             SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
+                ElevatedButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => WorkoutDetailsPage(workoutPlan: plan),
+                        builder: (context) => WorkoutDetailsPage(
+                          workoutPlan: plan,
+                          workoutType: 'Solo',
+                          sharedKey: '',
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: Text('Solo', style: TextStyle(fontSize: 14)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => WorkoutDetailsPage(
+                          workoutPlan: plan,
+                          workoutType: 'Collaborative',
+                          sharedKey: '',
+                        ),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.lightBlueAccent[600],
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  icon: Icon(Icons.play_arrow, size: 18),
-                  label: Text('Start Workout', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  child: Text('Collaborative', style: TextStyle(fontSize: 14)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CompetitiveWorkoutScreen(workoutPlan: plan),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  child: Text('Competitive', style: TextStyle(fontSize: 14)),
                 ),
               ],
             ),

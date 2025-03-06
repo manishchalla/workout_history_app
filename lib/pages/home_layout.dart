@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workout_app/pages/workouts/join_workout_screen.dart';
 import '../widgets/recent_performance_widget.dart'; // Import the RecentPerformanceWidget
 import 'download_workout_plan_page.dart';
 import 'workout_history_page.dart';
@@ -38,6 +39,25 @@ class _HomeLayoutState extends State<HomeLayout> {
         children: [
           Expanded(
             child: _pages[_selectedIndex], // Display the selected page
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JoinWorkoutScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.lightBlueAccent[600],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: Text('Join Workout', style: TextStyle(fontSize: 16)),
+            ),
           ),
           RecentPerformanceWidget(), // Persistent footer for recent performance
         ],

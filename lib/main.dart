@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'providers/workout_provider.dart';
 import 'pages/home_layout.dart';
+import 'firebase_options.dart'; // Import Firebase options
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Enable Anonymous Authentication
+  FirebaseAuth auth = FirebaseAuth.instance;
+  User? user = auth.currentUser;
+  if (user == null) {
+    await auth.signInAnonymously(); // Sign in anonymously if no user exists
+  }
 
   // Initialize the WorkoutProvider and load data
   final workoutProvider = WorkoutProvider();
