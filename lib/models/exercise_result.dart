@@ -3,10 +3,14 @@ import 'exercise.dart';
 class ExerciseResult {
   final Exercise exercise; // The exercise details (name, target output, unit)
   final int actualOutput; // The actual output achieved by the user
+  final int? ranking; // Position in competitive workout for this exercise
+  final int? teamTotal;
 
   ExerciseResult({
     required this.exercise,
     required this.actualOutput,
+    this.ranking, // Add ranking
+    this.teamTotal,
   });
 
   bool get isSuccessful => actualOutput >= exercise.targetOutput;

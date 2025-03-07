@@ -5,8 +5,8 @@ import '../models/exercise_result.dart';
 import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
+import '../services/firestore_service.dart'; // Add FirestoreService import
 import 'package:provider/provider.dart';
-
 
 class WorkoutDetailsPage extends StatefulWidget {
   final WorkoutPlan workoutPlan;
@@ -27,11 +27,30 @@ class WorkoutDetailsPage extends StatefulWidget {
 class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   late Map<String, int> _actualOutputs;
   bool _isSaving = false; // For loading indicator during save
+  final FirestoreService _firestoreService = FirestoreService(); // Add FirestoreService instance
 
   @override
   void initState() {
     super.initState();
     _actualOutputs = {for (var exercise in widget.workoutPlan.exercises) exercise.name: 0};
+
+    // Display invite code for group workouts
+    if (widget.workoutType != 'Solo' && widget.sharedKey.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invite Code: ${widget.sharedKey}'),
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      });
+    }
   }
 
   String? _validateInput(String? value, int max) {
@@ -65,35 +84,31 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         );
       }).toList();
 
-      Workout workout = Workout(
-        id: null,
-        date: DateTime.now(),
-        results: results,
-      );
-
-      print('Adding workout to provider...');
       final workoutProvider = Provider.of<WorkoutProvider>(context, listen: false);
 
       if (widget.workoutType == 'Solo') {
         // Save solo workout to SQLite
+        Workout workout = Workout(
+          id: null,
+          date: DateTime.now(),
+          results: results,
+        );
+
         await workoutProvider.addWorkout(workout);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Solo workout saved successfully!')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Solo workout saved successfully!'),duration: Duration(seconds: 4)));
       } else {
         // Handle group workouts (collaborative or competitive)
         if (widget.sharedKey.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Shared key is required for group workouts.')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Shared key is required for group workouts.'),duration: Duration(seconds: 5)));
           return;
         }
 
-        if (widget.workoutType == 'Collaborative') {
-          // Create or join a collaborative workout
-          await workoutProvider.createGroupWorkout(widget.workoutType, widget.sharedKey, results);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Collaborative workout created/joined successfully!')));
-        } else if (widget.workoutType == 'Competitive') {
-          // Create or join a competitive workout
-          await workoutProvider.joinGroupWorkout(widget.sharedKey, results);
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Competitive workout joined successfully!')));
-        }
+        // Submit results to Firestore
+        await _firestoreService.submitWorkoutResults(widget.sharedKey, results);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${widget.workoutType} workout results submitted!'),duration: Duration(seconds: 5)),
+        );
       }
 
       // Navigate to the Results Page after saving
@@ -105,7 +120,7 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
       );
     } catch (e) {
       print('Error during save: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save workout: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save workout: $e'),duration: Duration(seconds: 5)));
     } finally {
       setState(() => _isSaving = false); // Hide loading indicator
     }
@@ -113,16 +128,77 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Set background color based on workout type
+    Color backgroundColor;
+    Color buttonColor;
+
+    switch (widget.workoutType) {
+      case 'Collaborative':
+        backgroundColor = Colors.blue.shade50;
+        buttonColor = Colors.blue;
+        break;
+      case 'Competitive':
+        backgroundColor = Colors.orange.shade50;
+        buttonColor = Colors.orange;
+        break;
+      default: // Solo
+        backgroundColor = Colors.teal.shade50;
+        buttonColor = Colors.teal;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.workoutType} Workout: ${widget.workoutPlan.name}'),
-        backgroundColor: Colors.teal,
+        backgroundColor: buttonColor,
       ),
-      body: widget.workoutPlan.exercises.isEmpty
-          ? Center(child: Text('No exercises available.', style: TextStyle(fontSize: 18, color: Colors.grey)))
-          : Column(
+      backgroundColor: backgroundColor,
+      body: Column(
         children: [
-          Expanded(
+          // Display invite code for group workouts
+          if (widget.workoutType != 'Solo' && widget.sharedKey.isNotEmpty)
+            Container(
+              padding: EdgeInsets.all(16),
+              color: Colors.grey.shade200,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Invite Code:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          widget.sharedKey,
+                          style: TextStyle(fontSize: 18, letterSpacing: 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.copy),
+                    onPressed: () {
+                      // Copy to clipboard functionality could be added here
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Invite code copied to clipboard'),duration: Duration(seconds: 1)),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+          widget.workoutPlan.exercises.isEmpty
+              ? Expanded(
+            child: Center(
+              child: Text(
+                'No exercises available.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            ),
+          )
+              : Expanded(
             child: ListView.builder(
               itemCount: widget.workoutPlan.exercises.length,
               itemBuilder: (context, index) {
@@ -131,17 +207,26 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
               },
             ),
           ),
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: _isSaving ? null : () => _saveWorkout(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlueAccent[600],
+                backgroundColor: buttonColor,
+                padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
               child: _isSaving
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Save Workout', style: TextStyle(color: Colors.blueAccent)),
+                  ? SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(color: Colors.white),
+              )
+                  : Text(
+                'Submit Results',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
           ),
         ],

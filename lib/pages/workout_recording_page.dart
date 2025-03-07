@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workout_app/pages/workouts/collaborative_workout_screen.dart';
 import 'package:workout_app/pages/workouts/competitive_workout_screen.dart';
 import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
@@ -122,11 +123,7 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => WorkoutDetailsPage(
-                          workoutPlan: plan,
-                          workoutType: 'Collaborative',
-                          sharedKey: '',
-                        ),
+                        builder: (context) => CollaborativeWorkoutScreen(workoutPlan: plan),
                       ),
                     );
                   },

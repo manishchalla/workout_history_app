@@ -4,16 +4,16 @@ import '../../models/workout_plan.dart';
 import '../../services/firestore_service.dart';
 import '../workout_details_page.dart';
 
-class CompetitiveWorkoutScreen extends StatefulWidget {
+class CollaborativeWorkoutScreen extends StatefulWidget {
   final WorkoutPlan workoutPlan;
 
-  const CompetitiveWorkoutScreen({super.key, required this.workoutPlan});
+  const CollaborativeWorkoutScreen({super.key, required this.workoutPlan});
 
   @override
-  _CompetitiveWorkoutScreenState createState() => _CompetitiveWorkoutScreenState();
+  _CollaborativeWorkoutScreenState createState() => _CollaborativeWorkoutScreenState();
 }
 
-class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
+class _CollaborativeWorkoutScreenState extends State<CollaborativeWorkoutScreen> {
   late String _inviteCode;
   final FirestoreService _firestoreService = FirestoreService();
   bool _isCreating = false;
@@ -42,9 +42,9 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
     });
 
     try {
-      // Create the competitive workout in Firestore
+      // Create the collaborative workout in Firestore
       _workoutId = await _firestoreService.createGroupWorkout(
-        workoutType: 'Competitive',
+        workoutType: 'Collaborative',
         inviteCode: _inviteCode,
         workoutPlan: widget.workoutPlan,
       );
@@ -55,7 +55,7 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
         MaterialPageRoute(
           builder: (context) => WorkoutDetailsPage(
             workoutPlan: widget.workoutPlan,
-            workoutType: 'Competitive',
+            workoutType: 'Collaborative',
             sharedKey: _inviteCode,
           ),
         ),
@@ -78,8 +78,8 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Competitive Workout'),
-        backgroundColor: Colors.orangeAccent,
+        title: Text('Collaborative Workout'),
+        backgroundColor: Colors.blue,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -129,7 +129,7 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Share this code with friends to join the competitive workout.',
+                      'Share this code with friends to join the collaborative workout.',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
@@ -139,7 +139,7 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
 
             SizedBox(height: 24),
 
-            // Workout details section
+            // Workout details section with explanation of collaborative workout
             Card(
               elevation: 4,
               child: Padding(
@@ -148,10 +148,15 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Workout Details',
+                      'Collaborative Workout',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 8),
+                    Text(
+                      'In a collaborative workout, everyone\'s results are combined! Work together to reach the targets.',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                    SizedBox(height: 16),
                     Text('${widget.workoutPlan.exercises.length} Exercises:'),
                     SizedBox(height: 8),
                     ...widget.workoutPlan.exercises.map((exercise) => Padding(
@@ -171,13 +176,13 @@ class _CompetitiveWorkoutScreenState extends State<CompetitiveWorkoutScreen> {
               child: ElevatedButton(
                 onPressed: _isCreating ? null : _startWorkout,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orangeAccent,
+                  backgroundColor: Colors.blue,
                   padding: EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: _isCreating
                     ? CircularProgressIndicator(color: Colors.white)
-                    : Text('Start Competitive Workout', style: TextStyle(fontSize: 18)),
+                    : Text('Start Collaborative Workout', style: TextStyle(fontSize: 18)),
               ),
             ),
           ],

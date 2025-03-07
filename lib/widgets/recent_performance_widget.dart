@@ -38,9 +38,18 @@ class RecentPerformanceWidget extends StatelessWidget {
     // Calculate total exercises and successful exercises
     int totalExercises = 0;
     int successfulExercises = 0;
+    int soloWorkouts = 0;
+    int groupWorkouts = 0;
+
     for (var workout in recentWorkouts) {
       totalExercises += workout.results.length;
       successfulExercises += workout.results.where((result) => result.isSuccessful).length;
+
+      if (workout.type == 'Solo') {
+        soloWorkouts++;
+      } else {
+        groupWorkouts++;
+      }
     }
 
     double successPercentage = totalExercises > 0 ? (successfulExercises / totalExercises) * 100 : 0;
@@ -71,6 +80,17 @@ class RecentPerformanceWidget extends StatelessWidget {
                 style: TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold, color: Colors.teal),
               ),
               SizedBox(height: 8.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (soloWorkouts > 0)
+                    _buildStatBadge('Solo: $soloWorkouts', Colors.teal),
+                  SizedBox(width: 8),
+                  if (groupWorkouts > 0)
+                    _buildStatBadge('Group: $groupWorkouts', Colors.blue),
+                ],
+              ),
+              SizedBox(height: 8.0),
               Text(
                 'Successful Exercises: $successfulExercises / $totalExercises',
                 style: TextStyle(fontSize: 16.0, color: Colors.black87),
@@ -92,6 +112,25 @@ class RecentPerformanceWidget extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatBadge(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: color,
         ),
       ),
     );

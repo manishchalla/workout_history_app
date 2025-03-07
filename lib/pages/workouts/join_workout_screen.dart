@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../../models/exercise.dart';
 import '../../models/workout_plan.dart';
-import '../../providers/workout_provider.dart';
+import '../../services/firestore_service.dart';
 import '../workout_details_page.dart';
 
 class JoinWorkoutScreen extends StatefulWidget {
@@ -13,37 +13,71 @@ class JoinWorkoutScreen extends StatefulWidget {
 
 class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
   final TextEditingController _inviteCodeController = TextEditingController();
+  final FirestoreService _firestoreService = FirestoreService();
+  bool _isJoining = false;
+  String? _errorMessage;
 
-  void _joinWorkout(BuildContext context) async {
+  Future<void> _joinWorkout() async {
     final inviteCode = _inviteCodeController.text.trim();
     if (inviteCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter an invite code.')),
-      );
+      setState(() {
+        _errorMessage = 'Please enter an invite code';
+      });
       return;
     }
 
-    final workoutProvider = Provider.of<WorkoutProvider>(context, listen: false);
+    setState(() {
+      _isJoining = true;
+      _errorMessage = null;
+    });
 
     try {
-      // Fetch the workout details using the invite code
-      final workoutData = await workoutProvider.getGroupWorkout(inviteCode);
+      // Join the group workout
+      final workoutData = await _firestoreService.joinGroupWorkout(inviteCode);
+
+      // Extract the workout plan data
+      final workoutPlanData = workoutData['workout_plan'];
+
+      if (workoutPlanData == null) {
+        throw Exception('Invalid workout data. Please try again with a valid invite code.');
+      }
+
+      // Create workout plan object
+      final exercises = (workoutPlanData['exercises'] as List)
+          .map((e) => Exercise(
+        name: e['name'],
+        targetOutput: e['target'],
+        unit: e['unit'],
+      ))
+          .toList();
+
+      final workoutPlan = WorkoutPlan(
+        name: workoutPlanData['name'],
+        exercises: exercises,
+      );
+
+      // Determine workout type
+      final workoutType = workoutData['type'] ?? 'Competitive';
 
       // Navigate to the workout details page
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => WorkoutDetailsPage(
-            workoutPlan: WorkoutPlan.fromJson(workoutData), // Convert Firestore data to WorkoutPlan
-            workoutType: 'Competitive',
+            workoutPlan: workoutPlan,
+            workoutType: workoutType,
             sharedKey: inviteCode,
           ),
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to join workout: $e')),
-      );
+      setState(() {
+        _errorMessage = 'Error: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isJoining = false;
+      });
     }
   }
 
@@ -55,25 +89,55 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
         backgroundColor: Colors.teal,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Enter Invite Code',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Ask your friend for the 6-digit invite code to join their workout.',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 24),
+
+            // Invite code input
             TextField(
               controller: _inviteCodeController,
               decoration: InputDecoration(
-                labelText: 'Enter Invite Code',
+                labelText: 'Invite Code',
+                hintText: 'Enter 6-digit code',
                 border: OutlineInputBorder(),
+                errorText: _errorMessage,
+                prefixIcon: Icon(Icons.group),
               ),
+              textCapitalization: TextCapitalization.characters,
+              style: TextStyle(fontSize: 20, letterSpacing: 2),
+              maxLength: 6,
             ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => _joinWorkout(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlueAccent[600],
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+
+            SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isJoining ? null : _joinWorkout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: _isJoining
+                    ? SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                    : Text('Join Workout', style: TextStyle(fontSize: 18)),
               ),
-              child: Text('Join Workout', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

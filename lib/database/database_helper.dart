@@ -1,8 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout.dart';
@@ -42,7 +42,8 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE workouts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL
+        date TEXT NOT NULL,
+        type TEXT DEFAULT 'Solo'
       )
     ''');
 
@@ -77,13 +78,25 @@ class DatabaseHelper {
           exercises TEXT NOT NULL
         )
       ''');
+
+      // Add type column to workouts if it doesn't exist
+      try {
+        await db.execute('ALTER TABLE workouts ADD COLUMN type TEXT DEFAULT "Solo"');
+      } catch (e) {
+        // Column might already exist
+        print('Error adding column: $e');
+      }
     }
   }
 
   // Insert a new workout into the SQLite database (Solo Workouts)
   Future<int> insertWorkout(Workout workout) async {
     final db = await database;
-    int workoutId = await db.insert('workouts', {'date': workout.date.toIso8601String()});
+    int workoutId = await db.insert('workouts', {
+      'date': workout.date.toIso8601String(),
+      'type': 'Solo'
+    });
+
     for (var result in workout.results) {
       await db.insert('exercise_results', {
         'workout_id': workoutId,
@@ -183,66 +196,64 @@ class DatabaseHelper {
     await db.delete('workout_plans', where: 'id = ?', whereArgs: [planId]);
   }
 
-  // Firestore Methods for Group Workouts
+  // In database_helper.dart
+// Add this method to fetch recent group workouts from Firestore
 
-  // Create a new group workout in Firestore
-  Future<String> createGroupWorkout(String type, String sharedKey, List<ExerciseResult> results) async {
+  Future<List<Workout>> getRecentGroupWorkouts() async {
     final firestore = FirebaseFirestore.instance;
-    final userId = FirebaseAuth.instance.currentUser!.uid;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
-    // Store workout data in Firestore
-    final workoutRef = await firestore.collection('workouts').add({
-      'type': type,
-      'creatorId': userId,
-      'date': DateTime.now(),
-      'sharedKey': sharedKey,
-      'results': {userId: results.map((result) => result.toJson()).toList()},
-    });
+    if (userId == null) return [];
 
-    return workoutRef.id; // Return the Firestore document ID
-  }
-
-  // Join a group workout using the shared key
-  Future<void> joinGroupWorkout(String sharedKey, List<ExerciseResult> results) async {
-    final firestore = FirebaseFirestore.instance;
-    final userId = FirebaseAuth.instance.currentUser!.uid;
-
-    // Find the workout by shared key
+    // Simplified query - just query for workouts where this user is a participant
     final querySnapshot = await firestore
-        .collection('workouts')
-        .where('sharedKey', isEqualTo: sharedKey)
+        .collection('group_workouts')
+        .where('participants.$userId', isNull: false)
         .get();
 
-    if (querySnapshot.docs.isEmpty) {
-      throw Exception('Workout not found');
+    List<Workout> groupWorkouts = [];
+
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      final workoutType = data['type'] as String;
+      final workoutPlanData = data['workout_plan'];
+      final participants = data['participants'] as Map<String, dynamic>;
+      final userParticipantData = participants[userId];
+
+      if (userParticipantData != null &&
+          userParticipantData['results'] != null &&
+          workoutPlanData != null) {
+
+        // Convert results to ExerciseResult objects
+        final results = (userParticipantData['results'] as List)
+            .map((result) {
+          return ExerciseResult(
+            exercise: Exercise(
+              name: result['name'],
+              targetOutput: result['target'],
+              unit: result['unit'],
+            ),
+            actualOutput: result['actual_output'],
+          );
+        }).toList();
+
+        // Create Workout object
+        Timestamp? createdAt = data['created_at'] as Timestamp?;
+        DateTime date = createdAt?.toDate() ?? DateTime.now();
+
+        groupWorkouts.add(Workout(
+          id: null,
+          date: date,
+          results: results,
+          type: workoutType,
+        ));
+      }
     }
 
-    final workoutDoc = querySnapshot.docs.first;
-    final workoutData = workoutDoc.data();
+    // Sort the workouts by date after fetching them
+    groupWorkouts.sort((a, b) => b.date.compareTo(a.date));
 
-    // Update the results map with the current user's results
-    final updatedResults = Map<String, dynamic>.from(workoutData['results']);
-    updatedResults[userId] = results.map((result) => result.toJson()).toList();
-
-    // Update the workout document in Firestore
-    await workoutDoc.reference.update({'results': updatedResults});
-  }
-
-  // Fetch group workout details by shared key
-  Future<Map<String, dynamic>> getGroupWorkout(String sharedKey) async {
-    final firestore = FirebaseFirestore.instance;
-
-    // Find the workout by shared key
-    final querySnapshot = await firestore
-        .collection('workouts')
-        .where('sharedKey', isEqualTo: sharedKey)
-        .get();
-
-    if (querySnapshot.docs.isEmpty) {
-      throw Exception('Workout not found');
-    }
-
-    final workoutDoc = querySnapshot.docs.first;
-    return workoutDoc.data();
+    // Return just the most recent ones
+    return groupWorkouts.take(10).toList();
   }
 }

@@ -1,7 +1,7 @@
 import 'exercise.dart';
 
 class WorkoutPlan {
-  int? id; // Nullable and non-final ID
+  final int? id; // Nullable because it's assigned after insertion into SQLite
   final String name;
   final List<Exercise> exercises;
 
@@ -12,17 +12,17 @@ class WorkoutPlan {
   });
 
   // Factory method to create a WorkoutPlan from JSON
-  factory WorkoutPlan.fromJson(Map<String, dynamic> json) {
+  factory WorkoutPlan.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      throw ArgumentError('Invalid or missing data in WorkoutPlan JSON');
+    }
+
     return WorkoutPlan(
-      id: json['id'], // ID may be null
-      name: json['name'],
-      exercises: (json['exercises'] as List<dynamic>)
-          .map((e) => Exercise(
-        name: e['name'],
-        targetOutput: e['targetOutput'] ?? 0,
-        unit: e['unit'] ?? 'repetitions',
-      ))
-          .toList(),
+      name: json['name'] ?? 'Unnamed Workout', // Default to 'Unnamed Workout' if null
+      exercises: (json['exercises'] as List<dynamic>?)
+          ?.map((e) => Exercise.fromJson(e))
+          .toList() ??
+          [], // Default to empty list if null
     );
   }
 
@@ -31,11 +31,14 @@ class WorkoutPlan {
     return {
       'id': id,
       'name': name,
-      'exercises': exercises.map((e) => {
-        'name': e.name,
-        'targetOutput': e.targetOutput,
-        'unit': e.unit,
-      }).toList(),
+      'exercises': exercises.map((e) => e.toJson()).toList(),
     };
+  }
+  WorkoutPlan copyWithId(int id) {
+    return WorkoutPlan(
+      id: id,
+      name: name,
+      exercises: exercises,
+    );
   }
 }
