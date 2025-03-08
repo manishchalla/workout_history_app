@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
+import 'dart:async';
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout_plan.dart';
@@ -68,8 +69,10 @@ class FirestoreService {
         userId: {
           'joined_at': FieldValue.serverTimestamp(),
           'results': [],
+          'is_creator': true,
         }
       },
+      'status': 'waiting',
       'is_active': true,
     });
 
@@ -94,6 +97,12 @@ class FirestoreService {
     final workoutDoc = querySnapshot.docs.first;
     final workoutData = workoutDoc.data();
 
+    // Check if workout has already started
+    final status = workoutData['status'] as String? ?? 'waiting';
+    if (status == 'active') {
+      throw Exception('This workout has already started and cannot be joined.');
+    }
+
     // Add the user to participants if not already there
     if (!workoutData['participants'].containsKey(userId)) {
       await workoutDoc.reference.update({
@@ -105,6 +114,13 @@ class FirestoreService {
     }
 
     return workoutData;
+  }
+
+  // Start a workout (change status to active)
+  Future<void> startWorkout(String workoutId) async {
+    await _firestore.collection('group_workouts').doc(workoutId).update({
+      'status': 'active',
+    });
   }
 
   // Submit results for a group workout
@@ -150,6 +166,11 @@ class FirestoreService {
     final workoutData = workoutDoc.data();
 
     return workoutData;
+  }
+
+  // Listen for workout changes
+  Stream<DocumentSnapshot> listenToWorkout(String workoutId) {
+    return _firestore.collection('group_workouts').doc(workoutId).snapshots();
   }
 
   // Calculate rankings for competitive workout

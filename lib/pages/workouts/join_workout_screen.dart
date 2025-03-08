@@ -3,6 +3,7 @@ import '../../models/exercise.dart';
 import '../../models/workout_plan.dart';
 import '../../services/firestore_service.dart';
 import '../workout_details_page.dart';
+import 'qr_scanner_screen.dart';
 
 class JoinWorkoutScreen extends StatefulWidget {
   const JoinWorkoutScreen({super.key});
@@ -46,7 +47,7 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
       final exercises = (workoutPlanData['exercises'] as List)
           .map((e) => Exercise(
         name: e['name'],
-        targetOutput: e['target'],
+        targetOutput: (e['target'] as num).toInt(),
         unit: e['unit'],
       ))
           .toList();
@@ -81,6 +82,15 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
     }
   }
 
+  void _openQrScanner() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QrScannerScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,15 +104,22 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enter Invite Code',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              'Join a Workout',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 24),
+
+            // Option 1: Enter Code
+            Text(
+              'Option 1: Enter Invite Code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 8),
             Text(
-              'Ask your friend for the 6-digit invite code to join their workout.',
+              'Ask your friend for the 6-digit invite code.',
               style: TextStyle(color: Colors.grey[600]),
             ),
-            SizedBox(height: 24),
+            SizedBox(height: 12),
 
             // Invite code input
             TextField(
@@ -112,14 +129,14 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
                 hintText: 'Enter 6-digit code',
                 border: OutlineInputBorder(),
                 errorText: _errorMessage,
-                prefixIcon: Icon(Icons.group),
+                prefixIcon: Icon(Icons.key),
               ),
               textCapitalization: TextCapitalization.characters,
               style: TextStyle(fontSize: 20, letterSpacing: 2),
               maxLength: 6,
             ),
 
-            SizedBox(height: 24),
+            SizedBox(height: 16),
 
             SizedBox(
               width: double.infinity,
@@ -137,6 +154,34 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
                   child: CircularProgressIndicator(color: Colors.white),
                 )
                     : Text('Join Workout', style: TextStyle(fontSize: 18)),
+              ),
+            ),
+
+            SizedBox(height: 32),
+
+            // Option 2: Scan QR Code
+            Text(
+              'Option 2: Scan QR Code',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Scan the QR code shown on your friend\'s device.',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 16),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _openQrScanner,
+                icon: Icon(Icons.qr_code_scanner),
+                label: Text('Scan QR Code', style: TextStyle(fontSize: 18)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
           ],

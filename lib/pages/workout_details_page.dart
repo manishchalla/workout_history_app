@@ -5,8 +5,10 @@ import '../models/exercise_result.dart';
 import '../models/workout.dart';
 import '../models/workout_plan.dart';
 import '../providers/workout_provider.dart';
-import '../services/firestore_service.dart'; // Add FirestoreService import
+import '../services/firestore_service.dart';
 import 'package:provider/provider.dart';
+
+import 'home_layout.dart';
 
 class WorkoutDetailsPage extends StatefulWidget {
   final WorkoutPlan workoutPlan;
@@ -27,30 +29,12 @@ class WorkoutDetailsPage extends StatefulWidget {
 class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
   late Map<String, int> _actualOutputs;
   bool _isSaving = false; // For loading indicator during save
-  final FirestoreService _firestoreService = FirestoreService(); // Add FirestoreService instance
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
     _actualOutputs = {for (var exercise in widget.workoutPlan.exercises) exercise.name: 0};
-
-    // Display invite code for group workouts
-    if (widget.workoutType != 'Solo' && widget.sharedKey.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invite Code: ${widget.sharedKey}'),
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Dismiss',
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
-          ),
-        );
-      });
-    }
   }
 
   String? _validateInput(String? value, int max) {
@@ -69,7 +53,6 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         final error = _validateInput(_actualOutputs[exercise.name]?.toString(), exercise.targetOutput);
         if (error != null) {
           print('Validation failed for ${exercise.name}: $error');
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error in ${exercise.name}: $error')));
           return;
         }
       }
@@ -92,35 +75,34 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
           id: null,
           date: DateTime.now(),
           results: results,
+          type: 'Solo',
         );
 
         await workoutProvider.addWorkout(workout);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Solo workout saved successfully!'),duration: Duration(seconds: 4)));
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => HomeLayout()),
+              (route) => false, // Clear the navigation stack
+        );
       } else {
         // Handle group workouts (collaborative or competitive)
         if (widget.sharedKey.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Shared key is required for group workouts.'),duration: Duration(seconds: 5)));
           return;
         }
 
         // Submit results to Firestore
         await _firestoreService.submitWorkoutResults(widget.sharedKey, results);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.workoutType} workout results submitted!'),duration: Duration(seconds: 5)),
+        // For group workouts, navigate to results page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WorkoutResultsPage(sharedKey: widget.sharedKey),
+          ),
         );
       }
-
-      // Navigate to the Results Page after saving
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WorkoutResultsPage(sharedKey: widget.sharedKey),
-        ),
-      );
     } catch (e) {
       print('Error during save: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save workout: $e'),duration: Duration(seconds: 5)));
     } finally {
       setState(() => _isSaving = false); // Hide loading indicator
     }
@@ -154,40 +136,7 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
       backgroundColor: backgroundColor,
       body: Column(
         children: [
-          // Display invite code for group workouts
-          if (widget.workoutType != 'Solo' && widget.sharedKey.isNotEmpty)
-            Container(
-              padding: EdgeInsets.all(16),
-              color: Colors.grey.shade200,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Invite Code:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          widget.sharedKey,
-                          style: TextStyle(fontSize: 18, letterSpacing: 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.copy),
-                    onPressed: () {
-                      // Copy to clipboard functionality could be added here
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Invite code copied to clipboard'),duration: Duration(seconds: 1)),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+          // No invite code or QR code display here - it's removed
 
           widget.workoutPlan.exercises.isEmpty
               ? Expanded(

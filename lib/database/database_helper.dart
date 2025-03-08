@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
+import 'dart:math';
 import '../models/exercise.dart';
 import '../models/exercise_result.dart';
 import '../models/workout.dart';
@@ -29,16 +30,33 @@ class DatabaseHelper {
   // Initialize the SQLite database
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'workout_app.db');
+    print('Database path: $path'); // Print the database path
+
     return await openDatabase(
       path,
-      version: 2,
+      version: 3, // Increment version to trigger upgrade
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
+      onOpen: (db) async {
+        // Check if the workout_plans table exists
+        var tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
+        print('Database tables: $tables');
+
+        // Check if workout_plans table has any data
+        try {
+          var count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM workout_plans'));
+          print('Workout plans count in database: $count');
+        } catch (e) {
+          print('Error counting workout plans: $e');
+        }
+      },
     );
   }
 
   // Create tables when the database is first created
   Future<void> _onCreate(Database db, int version) async {
+    print('Creating database tables for version $version');
+
     await db.execute('''
       CREATE TABLE workouts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,25 +84,58 @@ class DatabaseHelper {
         exercises TEXT NOT NULL
       )
     ''');
+
+    print('Database tables created successfully');
   }
 
   // Handle database upgrades (e.g., adding new tables)
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('''
-        CREATE TABLE workout_plans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          exercises TEXT NOT NULL
-        )
-      ''');
+    print('Upgrading database from version $oldVersion to $newVersion');
 
-      // Add type column to workouts if it doesn't exist
+    if (oldVersion < 2) {
       try {
-        await db.execute('ALTER TABLE workouts ADD COLUMN type TEXT DEFAULT "Solo"');
+        print('Creating workout_plans table if it doesn\'t exist...');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS workout_plans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            exercises TEXT NOT NULL
+          )
+        ''');
+
+        // Add type column to workouts if it doesn't exist
+        try {
+          await db.execute('ALTER TABLE workouts ADD COLUMN type TEXT DEFAULT "Solo"');
+        } catch (e) {
+          // Column might already exist
+          print('Error adding column: $e');
+        }
       } catch (e) {
-        // Column might already exist
-        print('Error adding column: $e');
+        print('Error during upgrade to version 2: $e');
+      }
+    }
+
+    if (oldVersion < 3) {
+      // Just to force an upgrade and check the tables
+      print('Upgrading to version 3...');
+
+      // Make sure workout_plans table exists with correct schema
+      try {
+        final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='workout_plans'");
+        if (tables.isEmpty) {
+          print('workout_plans table doesn\'t exist, creating it...');
+          await db.execute('''
+            CREATE TABLE workout_plans (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              name TEXT NOT NULL,
+              exercises TEXT NOT NULL
+            )
+          ''');
+        } else {
+          print('workout_plans table exists');
+        }
+      } catch (e) {
+        print('Error checking workout_plans table: $e');
       }
     }
   }
@@ -134,6 +185,7 @@ class DatabaseHelper {
         id: workoutMap['id'],
         date: DateTime.parse(workoutMap['date']),
         results: results,
+        type: workoutMap['type'] ?? 'Solo',
       ));
     }
     return workouts;
@@ -149,41 +201,93 @@ class DatabaseHelper {
   // Insert or replace a workout plan into the SQLite database
   Future<int> insertWorkoutPlan(WorkoutPlan workoutPlan) async {
     final db = await database;
-    int id = await db.insert(
-      'workout_plans',
-      {
-        'name': workoutPlan.name,
-        'exercises': jsonEncode(workoutPlan.exercises.map((e) => {
-          'name': e.name,
-          'targetOutput': e.targetOutput,
-          'unit': e.unit,
-        }).toList()),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    return id; // Return the ID of the inserted workout plan
+    print('Saving workout plan to database: ${workoutPlan.name}');
+
+    final exercisesJson = jsonEncode(workoutPlan.exercises.map((e) => {
+      'name': e.name,
+      'targetOutput': e.targetOutput,
+      'unit': e.unit,
+    }).toList());
+
+    print('Exercises count: ${workoutPlan.exercises.length}');
+    print('Exercises JSON sample: ${exercisesJson.substring(0, min(100, exercisesJson.length))}...');
+
+    try {
+      int id = await db.insert(
+        'workout_plans',
+        {
+          'name': workoutPlan.name,
+          'exercises': exercisesJson,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('Workout plan saved with ID: $id');
+
+      // Verify the saved data
+      final savedPlans = await db.query(
+        'workout_plans',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (savedPlans.isNotEmpty) {
+        print('Saved plan confirmed in database with name: ${savedPlans.first['name']}');
+      } else {
+        print('Warning: Plan saved but not found on verification query');
+      }
+
+      return id;
+    } catch (e) {
+      print('Error inserting workout plan: $e');
+      rethrow;
+    }
   }
 
   // Fetch all saved workout plans from the SQLite database
   Future<List<WorkoutPlan>> getSavedWorkoutPlans() async {
     final db = await database;
     try {
+      print('Attempting to fetch workout plans from database...');
+
       final List<Map<String, dynamic>> maps = await db.query('workout_plans');
-      print('Fetched workout plans: $maps'); // Log fetched data
-      return maps.map((map) {
-        final exercises = (jsonDecode(map['exercises']) as List<dynamic>)
-            .map((e) => Exercise(
-          name: e['name'],
-          targetOutput: e['targetOutput'],
-          unit: e['unit'],
-        ))
-            .toList();
-        return WorkoutPlan(
-          id: map['id'], // Assign the ID from the database
-          name: map['name'],
-          exercises: exercises,
-        );
-      }).toList();
+      print('Fetched ${maps.length} workout plans from database');
+
+      if (maps.isEmpty) {
+        print('No workout plans found in database.');
+        return [];
+      }
+
+      List<WorkoutPlan> plans = [];
+      for (var map in maps) {
+        try {
+          print('Processing plan: ${map['name']}');
+          final exercisesJson = map['exercises'] as String;
+          print('Exercises JSON length: ${exercisesJson.length}');
+
+          final exercisesList = jsonDecode(exercisesJson) as List<dynamic>;
+          print('Decoded ${exercisesList.length} exercises');
+
+          final exercises = exercisesList.map((e) => Exercise(
+            name: e['name'],
+            targetOutput: e['targetOutput'],
+            unit: e['unit'],
+          )).toList();
+
+          plans.add(WorkoutPlan(
+            id: map['id'],
+            name: map['name'],
+            exercises: exercises,
+          ));
+
+          print('Successfully processed plan: ${map['name']} with ${exercises.length} exercises');
+        } catch (e) {
+          print('Error processing individual plan ${map['name']}: $e');
+        }
+      }
+
+      print('Returning ${plans.length} workout plans');
+      return plans;
     } catch (e) {
       print('Error fetching workout plans: $e');
       return [];
@@ -196,9 +300,7 @@ class DatabaseHelper {
     await db.delete('workout_plans', where: 'id = ?', whereArgs: [planId]);
   }
 
-  // In database_helper.dart
-// Add this method to fetch recent group workouts from Firestore
-
+  // Get recent group workouts from Firestore
   Future<List<Workout>> getRecentGroupWorkouts() async {
     final firestore = FirebaseFirestore.instance;
     final userId = FirebaseAuth.instance.currentUser?.uid;

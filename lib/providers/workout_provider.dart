@@ -29,6 +29,7 @@ class WorkoutProvider with ChangeNotifier {
   Future<void> loadWorkouts() async {
     // Load solo workouts from SQLite
     List<Workout> soloWorkouts = await _dbHelper.getWorkouts();
+    print('Loaded ${soloWorkouts.length} solo workouts from SQLite');
 
     // Update the workouts list with the solo workouts
     _workouts = soloWorkouts;
@@ -198,21 +199,36 @@ class WorkoutProvider with ChangeNotifier {
 
   // Load all saved workout plans from the database
   Future<void> loadSavedWorkoutPlans() async {
-    _savedWorkoutPlans = await _dbHelper.getSavedWorkoutPlans();
-    notifyListeners();
+    print('Loading saved workout plans...');
+    try {
+      _savedWorkoutPlans = await _dbHelper.getSavedWorkoutPlans();
+      print('Loaded ${_savedWorkoutPlans.length} workout plans');
+      notifyListeners();
+    } catch (e) {
+      print('Error loading saved workout plans: $e');
+    }
   }
 
   // Save a new workout plan to the database
   Future<void> saveWorkoutPlan(WorkoutPlan workoutPlan) async {
     try {
+      print('Saving workout plan: ${workoutPlan.name}');
       int id = await _dbHelper.insertWorkoutPlan(workoutPlan);
+      print('Plan saved with ID: $id');
 
       // Create a new WorkoutPlan object with the updated ID
       final updatedWorkoutPlan = workoutPlan.copyWithId(id);
 
       _savedWorkoutPlans.add(updatedWorkoutPlan);
+      print('Added plan to provider. Total plans: ${_savedWorkoutPlans.length}');
       notifyListeners();
-      print('Workout plan saved successfully.');
+      print('Notified listeners after saving workout plan.');
+
+      // Verify the updated list
+      print('Current workout plans:');
+      for (var plan in _savedWorkoutPlans) {
+        print('- ${plan.name} (ID: ${plan.id})');
+      }
     } catch (e) {
       print('Error saving workout plan: $e');
     }
