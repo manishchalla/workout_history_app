@@ -79,6 +79,8 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         );
 
         await workoutProvider.addWorkout(workout);
+
+        // For solo workouts, navigate to home
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => HomeLayout()),
@@ -93,7 +95,7 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         // Submit results to Firestore
         await _firestoreService.submitWorkoutResults(widget.sharedKey, results);
 
-        // For group workouts, navigate to results page
+        // Navigate to the Results Page after saving
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -128,57 +130,61 @@ class _WorkoutDetailsPageState extends State<WorkoutDetailsPage> {
         buttonColor = Colors.teal;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.workoutType} Workout: ${widget.workoutPlan.name}'),
-        backgroundColor: buttonColor,
-      ),
-      backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          // No invite code or QR code display here - it's removed
+    return WillPopScope(
+      onWillPop: () async => false, // Prevent back navigation
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('${widget.workoutType} Workout: ${widget.workoutPlan.name}'),
+          backgroundColor: buttonColor,
+          automaticallyImplyLeading: false, // Remove back button
+        ),
+        backgroundColor: backgroundColor,
+        body: Column(
+          children: [
+            // No invite code or QR code display here - it's removed
 
-          widget.workoutPlan.exercises.isEmpty
-              ? Expanded(
-            child: Center(
-              child: Text(
-                'No exercises available.',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+            widget.workoutPlan.exercises.isEmpty
+                ? Expanded(
+              child: Center(
+                child: Text(
+                  'No exercises available.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ),
+            )
+                : Expanded(
+              child: ListView.builder(
+                itemCount: widget.workoutPlan.exercises.length,
+                itemBuilder: (context, index) {
+                  final exercise = widget.workoutPlan.exercises[index];
+                  return _buildExerciseInput(context, exercise);
+                },
               ),
             ),
-          )
-              : Expanded(
-            child: ListView.builder(
-              itemCount: widget.workoutPlan.exercises.length,
-              itemBuilder: (context, index) {
-                final exercise = widget.workoutPlan.exercises[index];
-                return _buildExerciseInput(context, exercise);
-              },
-            ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _isSaving ? null : () => _saveWorkout(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor,
-                padding: EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              child: _isSaving
-                  ? SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(color: Colors.white),
-              )
-                  : Text(
-                'Submit Results',
-                style: TextStyle(fontSize: 18, color: Colors.white),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : () => _saveWorkout(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: buttonColor,
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: _isSaving
+                    ? SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                    : Text(
+                  'Submit Results',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

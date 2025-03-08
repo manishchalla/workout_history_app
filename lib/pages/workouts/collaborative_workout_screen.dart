@@ -79,12 +79,7 @@ class _CollaborativeWorkoutScreenState extends State<CollaborativeWorkoutScreen>
 
   void _copyInviteCode() {
     Clipboard.setData(ClipboardData(text: _inviteCode));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Code copied'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    // No snackbar
   }
 
   Future<void> _shareQrCode() async {
@@ -230,36 +225,81 @@ class _CollaborativeWorkoutScreenState extends State<CollaborativeWorkoutScreen>
                         ),
                         SizedBox(height: 12),
 
-                        // QR Code (centered and larger)
-                        Center(
-                          child: Column(
-                            children: [
-                              RepaintBoundary(
-                                key: _qrKey,
-                                child: QrImageView(
-                                  data: _inviteCode,
-                                  version: QrVersions.auto,
-                                  size: 150.0,
-                                  backgroundColor: Colors.white,
-                                ),
+                        // QR Code and Invite Code side by side
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // QR Code (smaller size)
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                children: [
+                                  RepaintBoundary(
+                                    key: _qrKey,
+                                    child: QrImageView(
+                                      data: _inviteCode,
+                                      version: QrVersions.auto,
+                                      size: 120.0,
+                                      backgroundColor: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _shareQrCode,
+                                    icon: Icon(Icons.share, size: 16),
+                                    label: Text('Share', style: TextStyle(fontSize: 14)),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                onPressed: _shareQrCode,
-                                icon: Icon(Icons.share, size: 16),
-                                label: Text('Share', style: TextStyle(fontSize: 14)),
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  backgroundColor: Colors.blue,
-                                ),
+                            ),
+
+                            SizedBox(width: 16),
+
+                            // Invite code
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Invite Code:',
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _inviteCode,
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 2),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _copyInviteCode,
+                                    icon: Icon(Icons.copy, size: 16),
+                                    label: Text('Copy', style: TextStyle(fontSize: 14)),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
 
                         SizedBox(height: 8),
                         Text(
-                          'Scan this QR code to join the workout',
+                          'Share code or scan QR to join the workout',
                           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                           textAlign: TextAlign.center,
                         ),

@@ -98,57 +98,69 @@ class _WorkoutRecordingPageState extends State<WorkoutRecordingPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => WorkoutDetailsPage(
-                          workoutPlan: plan,
-                          workoutType: 'Solo',
-                          sharedKey: '',
-                        ),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  child: Text('Solo', style: TextStyle(fontSize: 14)),
+                Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WorkoutDetailsPage(
+                              workoutPlan: plan,
+                              workoutType: 'Solo',
+                              sharedKey: '',
+                            ),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.person, color: Colors.teal),
+                      tooltip: 'Solo Workout',
+                    ),
+                    Text(
+                      'Solo',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CollaborativeWorkoutScreen(workoutPlan: plan),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlueAccent[600],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  child: Text('Collaborative', style: TextStyle(fontSize: 14)),
+                Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CollaborativeWorkoutScreen(workoutPlan: plan),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.people, color: Colors.lightBlueAccent[600]),
+                      tooltip: 'Collaborative Workout',
+                    ),
+                    Text(
+                      'Collaborative',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CompetitiveWorkoutScreen(workoutPlan: plan),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  child: Text('Competitive', style: TextStyle(fontSize: 14)),
+                Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CompetitiveWorkoutScreen(workoutPlan: plan),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.flag, color: Colors.orangeAccent),
+                      tooltip: 'Competitive Workout',
+                    ),
+                    Text(
+                      'Competitive',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                    ),
+                  ],
                 ),
               ],
             ),
