@@ -31,6 +31,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       _isProcessing = true;
     });
 
+    code = code.trim().toUpperCase();
+    print('Processing QR code: $code');
+
     try {
       // Join the group workout
       final workoutData = await _firestoreService.joinGroupWorkout(code);

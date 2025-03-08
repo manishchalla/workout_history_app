@@ -26,9 +26,10 @@ class FirestoreService {
   String generateInviteCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
     final random = Random();
-    return String.fromCharCodes(
+    String code = String.fromCharCodes(
       Iterable.generate(6, (_) => chars.codeUnitAt(random.nextInt(chars.length))),
     );
+    return code.toUpperCase();
   }
 
   // Upload a workout plan to Firestore
@@ -83,6 +84,11 @@ class FirestoreService {
   Future<Map<String, dynamic>> joinGroupWorkout(String inviteCode) async {
     final userId = await ensureAuthenticated();
 
+    // Normalize invite code to uppercase
+    inviteCode = inviteCode.toUpperCase();
+
+    print('Looking for workout with invite code: $inviteCode');
+
     // Query for the workout with the invite code
     final querySnapshot = await _firestore
         .collection('group_workouts')
@@ -90,12 +96,15 @@ class FirestoreService {
         .where('is_active', isEqualTo: true)
         .get();
 
+    print('Query returned ${querySnapshot.docs.length} documents');
+
     if (querySnapshot.docs.isEmpty) {
       throw Exception('No active workout found with that invite code.');
     }
 
     final workoutDoc = querySnapshot.docs.first;
     final workoutData = workoutDoc.data();
+    print('Found workout: ${workoutData['type']} - Status: ${workoutData['status']}');
 
     // Check if workout has already started
     final status = workoutData['status'] as String? ?? 'waiting';
@@ -105,12 +114,16 @@ class FirestoreService {
 
     // Add the user to participants if not already there
     if (!workoutData['participants'].containsKey(userId)) {
+      print('Adding user $userId as a participant');
       await workoutDoc.reference.update({
         'participants.$userId': {
           'joined_at': FieldValue.serverTimestamp(),
           'results': [],
         }
       });
+      print('User added successfully');
+    } else {
+      print('User is already a participant');
     }
 
     return workoutData;
@@ -177,31 +190,66 @@ class FirestoreService {
   Map<String, int> calculateRankings(Map<String, dynamic> participants) {
     if (participants.isEmpty) return {};
 
-    // Extract all participants and their total scores
-    List<MapEntry<String, int>> participantScores = [];
+    // Extract all participants and count their successful exercises
+    List<MapEntry<String, int>> participantSuccesses = [];
 
     participants.forEach((userId, data) {
       if (data['results'] != null && (data['results'] as List).isNotEmpty) {
-        int totalScore = 0;
+        int successCount = 0;
+        int totalExercises = (data['results'] as List).length;
 
         for (var result in data['results']) {
-          // Handle numeric values that might be num (int or double)
-          num resultOutput = result['actual_output'] ?? 0;
-          totalScore += resultOutput.toInt(); // Convert to int
+          // Consider an exercise successful if actual_output >= target
+          num actualOutput = result['actual_output'] ?? 0;
+          num targetOutput = result['target'] ?? 0;
+
+          if (actualOutput >= targetOutput) {
+            successCount++;
+          }
         }
 
-        participantScores.add(MapEntry(userId, totalScore));
+        // Add to our list for ranking
+        participantSuccesses.add(MapEntry(userId, successCount));
+
+        // Debug logging
+        print('User $userId: $successCount/$totalExercises successful exercises');
       }
     });
 
-    // Sort by score (descending)
-    participantScores.sort((a, b) => b.value.compareTo(a.value));
+    // Sort by success count (descending)
+    participantSuccesses.sort((a, b) => b.value.compareTo(a.value));
 
-    // Assign ranks
+    // Debug logging
+    print('Sorted participants: ${participantSuccesses.map((e) => "${e.key}:${e.value}").join(", ")}');
+
+    // Assign ranks (handling ties correctly)
     Map<String, int> rankings = {};
-    for (int i = 0; i < participantScores.length; i++) {
-      rankings[participantScores[i].key] = i + 1; // Rank starts at 1
+
+    if (participantSuccesses.isEmpty) return rankings;
+
+    // Initialize with first participant
+    int currentRank = 1;
+    int previousScore = participantSuccesses[0].value;
+    rankings[participantSuccesses[0].key] = currentRank;
+
+    // Process remaining participants
+    for (int i = 1; i < participantSuccesses.length; i++) {
+      final userId = participantSuccesses[i].key;
+      final score = participantSuccesses[i].value;
+
+      // If this score is lower than previous, increment rank
+      if (score < previousScore) {
+        currentRank = i + 1; // Rank should be position + 1
+      }
+
+      rankings[userId] = currentRank;
+      previousScore = score;
     }
+
+    // Debug logging
+    rankings.forEach((userId, rank) {
+      print('Assigned rank $rank to user $userId');
+    });
 
     return rankings;
   }

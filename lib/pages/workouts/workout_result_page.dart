@@ -225,10 +225,23 @@ class _WorkoutResultsPageState extends State<WorkoutResultsPage> {
                     ? List<Map<String, dynamic>>.from(userData['results'])
                     : <Map<String, dynamic>>[];
 
-                // Calculate total score
-                int totalScore = 0;
+                // Calculate success count instead of total score
+                int successCount = 0;
                 for (var result in results) {
-                  totalScore += (result['actual_output'] ?? 0) as int;
+                  final actualOutput = result['actual_output'] ?? 0;
+                  final targetOutput = result['target'] ?? 0;
+                  if (actualOutput >= targetOutput) {
+                    successCount++;
+                  }
+                }
+
+                // Display if there's a tie
+                bool isTied = false;
+                if (rank > 0) {
+                  // Check if any other participant has the same rank
+                  isTied = participantsList.where((p) =>
+                  p.key != userId && rankings[p.key] == rank
+                  ).isNotEmpty;
                 }
 
                 // Highlight the current user
@@ -254,6 +267,16 @@ class _WorkoutResultsPageState extends State<WorkoutResultsPage> {
                             if (rank > 0) ...[
                               _buildRankBadge(rank),
                               SizedBox(width: 8),
+                              if (isTied)
+                                Text(
+                                  "(Tied)",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              SizedBox(width: 8),
                             ],
 
                             Text(
@@ -268,13 +291,24 @@ class _WorkoutResultsPageState extends State<WorkoutResultsPage> {
                             Spacer(),
 
                             if (results.isNotEmpty)
-                              Text(
-                                'Score: $totalScore',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[700],
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Success: ',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    '$successCount/${results.length}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: successCount > 0 ? Colors.green : Colors.red,
+                                    ),
+                                  ),
+                                ],
                               )
                             else
                               Text(

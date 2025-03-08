@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:workout_app/pages/workouts/workout_waiting_screen.dart';
 import '../../models/exercise.dart';
 import '../../models/workout_plan.dart';
 import '../../services/firestore_service.dart';
@@ -19,7 +20,7 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
   String? _errorMessage;
 
   Future<void> _joinWorkout() async {
-    final inviteCode = _inviteCodeController.text.trim();
+    final inviteCode = _inviteCodeController.text.trim().toUpperCase();
     if (inviteCode.isEmpty) {
       setState(() {
         _errorMessage = 'Please enter an invite code';
@@ -33,8 +34,10 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
     });
 
     try {
+      print('Attempting to join workout with invite code: $inviteCode');
       // Join the group workout
       final workoutData = await _firestoreService.joinGroupWorkout(inviteCode);
+      print('Successfully joined workout: ${workoutData['type']}');
 
       // Extract the workout plan data
       final workoutPlanData = workoutData['workout_plan'];
@@ -60,18 +63,36 @@ class _JoinWorkoutScreenState extends State<JoinWorkoutScreen> {
       // Determine workout type
       final workoutType = workoutData['type'] ?? 'Competitive';
 
-      // Navigate to the workout details page
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WorkoutDetailsPage(
-            workoutPlan: workoutPlan,
-            workoutType: workoutType,
-            sharedKey: inviteCode,
+      // Check the workout status
+      final status = workoutData['status'] as String? ?? 'waiting';
+
+      if (status == 'waiting') {
+        // If workout hasn't started yet, show waiting screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WorkoutWaitingScreen(
+              workoutPlan: workoutPlan,
+              workoutType: workoutType,
+              sharedKey: inviteCode,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        // If workout is active, go directly to the workout details page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WorkoutDetailsPage(
+              workoutPlan: workoutPlan,
+              workoutType: workoutType,
+              sharedKey: inviteCode,
+            ),
+          ),
+        );
+      }
     } catch (e) {
+      print('Error joining workout: $e');
       setState(() {
         _errorMessage = 'Error: ${e.toString()}';
       });
